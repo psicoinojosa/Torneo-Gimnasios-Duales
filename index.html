@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torneo de Gimnasios Duales Pokémon</title>
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --card-bg: #161b22;
+      --accent-color: #eab308;
+      --text-color: #f3f4f6;
+      --border-color: #30363d;
+      --winner-color: #10b981;
+    }
+
+    /* Colores oficiales por tipo Pokémon */
+    .type-acero { background-color: #B7B7CE; color: #000; }
+    .type-agua { background-color: #6390F0; color: #fff; }
+    .type-bicho { background-color: #A6B91A; color: #000; }
+    .type-dragon { background-color: #6F35FC; color: #fff; }
+    .type-electrico { background-color: #F7D02C; color: #000; }
+    .type-fantasma { background-color: #735797; color: #fff; }
+    .type-fuego { background-color: #EE8130; color: #fff; }
+    .type-hada { background-color: #D685AD; color: #000; }
+    .type-hielo { background-color: #96D9D6; color: #000; }
+    .type-lucha { background-color: #C22E28; color: #fff; }
+    .type-normal { background-color: #A8A77A; color: #000; }
+    .type-planta { background-color: #7AC74C; color: #000; }
+    .type-psiquico { background-color: #F95587; color: #fff; }
+    .type-roca { background-color: #B6A136; color: #fff; }
+    .type-siniestro { background-color: #705746; color: #fff; }
+    .type-tierra { background-color: #E2BF65; color: #000; }
+    .type-veneno { background-color: #A33EA1; color: #fff; }
+    .type-volador { background-color: #A98FF3; color: #000; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; min-height: 100vh; }
+    h1, h2, h3 { text-align: center; margin-bottom: 15px; color: var(--accent-color); }
+    
+    .status-bar { text-align: center; padding: 10px; margin-bottom: 20px; border-radius: 6px; background: #21262d; border: 1px solid #10b981; color: #34d399; font-weight: bold; }
+    .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 30px; }
+    .section-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+    button { padding: 10px 18px; border-radius: 6px; background: var(--accent-color); color: #000; font-weight: bold; cursor: pointer; border: none; transition: transform 0.1s ease; }
+    button:hover { filter: brightness(1.1); }
+
+    /* Player Cards Grid */
+    .players-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+    .player-card { background: #21262d; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; }
+    .player-name { font-weight: bold; font-size: 1.1em; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-bottom: 10px; text-align: center; }
+    .gym-list { display: flex; flex-direction: column; gap: 8px; }
+    .gym-badge { display: flex; justify-content: space-around; align-items: center; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 0.9em; background: #161b22; }
+
+    /* Controls */
+    .controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+    
+    /* Bracket Layout */
+    .bracket-wrapper { overflow-x: auto; padding-bottom: 15px; }
+    .bracket-grid { display: grid; grid-template-columns: repeat(4, 280px); gap: 20px; justify-content: center; min-width: 1150px; }
+    .column-title { text-align: center; font-weight: bold; color: var(--accent-color); margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
+    .matchup { background: #21262d; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+    .team-slot { padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--border-color); }
+    .team-slot:last-child { border-bottom: none; }
+    .team-slot:hover { background: #30363d; }
+    .team-slot.winner { background: rgba(16, 185, 129, 0.2); border-left: 4px solid var(--winner-color); font-weight: bold; }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🔴 Torneo de Gimnasios Duales Pokémon 🔵</h1>
+    <div class="status-bar" id="statusBar">
+      🟢 Conectado en tiempo real a Firebase
+    </div>
+
+    <!-- Generator Section -->
+    <div class="section-box">
+      <h2>🎲 Sorteador de Gimnasios Duales</h2>
+      <div class="controls">
+        <label>Gimnasios por jugador: 
+          <input type="number" id="gymsPerPlayer" value="4" min="1" max="9" style="width: 50px; padding: 5px; background:#0d1117; color:#fff; border:1px solid #30363d; border-radius:4px;">
+        </label>
+        <button onclick="generateDualGyms()">¡Generar Sorteo de Gimnasios!</button>
+      </div>
+
+      <div class="players-grid" id="playersGrid"></div>
+    </div>
+
+    <!-- Bracket Section -->
+    <div class="section-box">
+      <h2>🏆 Cuadro del Torneo</h2>
+      <p style="text-align:center; font-size:0.85em; color:#9ca3af; margin-bottom:20px;">
+        Haz clic en un jugador para avanzarlo a la siguiente ronda.
+      </p>
+
+      <div class="bracket-wrapper">
+        <div class="bracket-grid">
+          <div>
+            <div class="column-title">Octavos de Final</div>
+            <div id="round1"></div>
+          </div>
+          <div>
+            <div class="column-title">Cuartos de Final</div>
+            <div id="round2"></div>
+          </div>
+          <div>
+            <div class="column-title">Semifinales</div>
+            <div id="round3"></div>
+          </div>
+          <div>
+            <div class="column-title">Gran Final</div>
+            <div id="round4"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:20px;">
+        <button onclick="resetTournamentData()" style="background:#ef4444; color:white;">Reiniciar Torneo</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuración directa de tu proyecto en Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCWXFsw5p9VAqmS-u_gSIYyMq50M4KK7E",
+      authDomain: "torneo-gimnasios-duales.firebaseapp.com",
+      databaseURL: "https://torneo-gimnasios-duales-default-rtdb.firebaseio.com",
+      projectId: "torneo-gimnasios-duales",
+      storageBucket: "torneo-gimnasios-duales.firebasestorage.app",
+      messagingSenderId: "441384922909",
+      appId: "1:441384922909:web:068a84bd67a2460a03fbf4",
+      measurementId: "G-L0SFES97JD"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const tournamentRef = db.ref('pokemon_tournament_state');
+
+    const pokemonTypes = [
+      { name: "Acero", class: "type-acero" }, { name: "Agua", class: "type-agua" },
+      { name: "Bicho", class: "type-bicho" }, { name: "Dragón", class: "type-dragon" },
+      { name: "Eléctrico", class: "type-electrico" }, { name: "Fantasma", class: "type-fantasma" },
+      { name: "Fuego", class: "type-fuego" }, { name: "Hada", class: "type-hada" },
+      { name: "Hielo", class: "type-hielo" }, { name: "Lucha", class: "type-lucha" },
+      { name: "Normal", class: "type-normal" }, { name: "Planta", class: "type-planta" },
+      { name: "Psíquico", class: "type-psiquico" }, { name: "Roca", class: "type-roca" },
+      { name: "Siniestro", class: "type-siniestro" }, { name: "Tierra", class: "type-tierra" },
+      { name: "Veneno", class: "type-veneno" }, { name: "Volador", class: "type-volador" }
+    ];
+
+    const playerNames = ["Richard", "Félix", "Alejandro", "Jorge"];
+
+    let state = {
+      playerGyms: {},
+      matches: {
+        round1: [
+          { team1: "Richard", team2: "Félix", winner: null },
+          { team1: "Alejandro", team2: "Jorge", winner: null }
+        ],
+        round2: [{ team1: "", team2: "", winner: null }],
+        round3: [{ team1: "", team2: "", winner: null }],
+        round4: [{ team1: "", team2: "", winner: null }]
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      tournamentRef.on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          state = val;
+          renderGyms();
+          renderBracket();
+        } else {
+          generateDualGyms();
+        }
+      });
+    });
+
+    function syncState() {
+      tournamentRef.set(state);
+    }
+
+    function generateDualGyms() {
+      const gymsPerPlayer = parseInt(document.getElementById('gymsPerPlayer').value) || 4;
+      let availableTypes = [];
+      
+      while (availableTypes.length < playerNames.length * gymsPerPlayer * 2) {
+        let shuffled = [...pokemonTypes].sort(() => 0.5 - Math.random());
+        availableTypes = availableTypes.concat(shuffled);
+      }
+
+      state.playerGyms = {};
+      playerNames.forEach(player => {
+        state.playerGyms[player] = [];
+        for (let i = 0; i < gymsPerPlayer; i++) {
+          const type1 = availableTypes.pop();
+          let type2 = availableTypes.pop();
+          while (type1.name === type2.name) {
+            availableTypes.unshift(type2);
+            type2 = availableTypes.pop();
+          }
+          state.playerGyms[player].push([type1, type2]);
+        }
+      });
+
+      syncState();
+    }
+
+    function renderGyms() {
+      const grid = document.getElementById('playersGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      Object.keys(state.playerGyms).forEach(player => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        
+        let gymsHTML = state.playerGyms[player].map(pair => `
+          <div class="gym-badge">
+            <span class="${pair[0].class}" style="padding: 4px 10px; border-radius: 4px; flex:1; text-align:center; margin-right:4px;">${pair[0].name}</span>
+            <span>/</span>
+            <span class="${pair[1].class}" style="padding: 4px 10px; border-radius: 4px; flex:1; text-align:center; margin-left:4px;">${pair[1].name}</span>
+          </div>
+        `).join('');
+
+        card.innerHTML = `<div class="player-name">${player}</div><div class="gym-list">${gymsHTML}</div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    function selectWinner(roundKey, matchIdx, teamNum) {
+      const match = state.matches[roundKey][matchIdx];
+      const selectedTeam = teamNum === 1 ? match.team1 : match.team2;
+      if (!selectedTeam) return;
+
+      match.winner = selectedTeam;
+      const nextRounds = { round1: 'round2', round2: 'round3', round3: 'round4' };
+      const nextRoundKey = nextRounds[roundKey];
+
+      if (nextRoundKey) {
+        const nextMatchIdx = Math.floor(matchIdx / 2);
+        if (matchIdx % 2 === 0) {
+          state.matches[nextRoundKey][nextMatchIdx].team1 = selectedTeam;
+        } else {
+          state.matches[nextRoundKey][nextMatchIdx].team2 = selectedTeam;
+        }
+      }
+
+      syncState();
+    }
+
+    function renderBracket() {
+      ['round1', 'round2', 'round3', 'round4'].forEach(roundKey => {
+        const container = document.getElementById(roundKey);
+        if (!container) return;
+        container.innerHTML = '';
+
+        (state.matches[roundKey] || []).forEach((m, idx) => {
+          const div = document.createElement('div');
+          div.className = 'matchup';
+          div.innerHTML = `
+            <div class="team-slot ${m.winner === m.team1 && m.team1 ? 'winner' : ''}" onclick="selectWinner('${roundKey}', ${idx}, 1)">
+              <span>${m.team1 || '---'}</span>
+            </div>
+            <div class="team-slot ${m.winner === m.team2 && m.team2 ? 'winner' : ''}" onclick="selectWinner('${roundKey}', ${idx}, 2)">
+              <span>${m.team2 || '---'}</span>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function resetTournamentData() {
+      if (confirm("¿Seguro que deseas reiniciar el cuadro?")) {
+        state.matches = {
+          round1: [
+            { team1: "Richard", team2: "Félix", winner: null },
+            { team1: "Alejandro", team2: "Jorge", winner: null }
+          ],
+          round2: [{ team1: "", team2: "", winner: null }],
+          round3: [{ team1: "", team2: "", winner: null }],
+          round4: [{ team1: "", team2: "", winner: null }]
+        };
+        syncState();
+      }
+    }
+  </script>
+</body>
+</html>
