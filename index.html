@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torneo de Gimnasios Duales - Tiempo Real</title>
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --card-bg: #161b22;
+      --accent-color: #f59e0b;
+      --accent-hover: #d97706;
+      --text-color: #f3f4f6;
+      --border-color: #30363d;
+      --winner-color: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: var(--accent-color);
+    }
+
+    .status-bar {
+      text-align: center;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      background: #21262d;
+      font-size: 0.95em;
+      font-weight: bold;
+    }
+
+    .status-online {
+      color: #34d399;
+      border: 1px solid #10b981;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .section-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    button {
+      padding: 10px 18px;
+      border-radius: 6px;
+      background: var(--accent-color);
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      border: none;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Wheel / Draft Section */
+    .wheel-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    canvas#rouletteCanvas {
+      background: transparent;
+      max-width: 100%;
+    }
+
+    /* Bracket Layout */
+    .bracket-wrapper {
+      overflow-x: auto;
+      padding-bottom: 15px;
+    }
+
+    .bracket-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 280px);
+      gap: 20px;
+      justify-content: center;
+      min-width: 1150px;
+    }
+
+    .column-title {
+      text-align: center;
+      font-weight: bold;
+      color: var(--accent-color);
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 5px;
+    }
+
+    .matchup {
+      background: #21262d;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+
+    .team-slot {
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .team-slot:last-child {
+      border-bottom: none;
+    }
+
+    .team-slot:hover {
+      background: #30363d;
+    }
+
+    .team-slot.winner {
+      background: rgba(16, 185, 129, 0.2);
+      border-left: 4px solid var(--winner-color);
+      font-weight: bold;
+    }
+
+    .team-name {
+      font-size: 0.95rem;
+    }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <h1>⚔️ Torneo de Gimnasios Duales ⚔️</h1>
+    <div class="status-bar status-online" id="statusBar">
+      🟢 Conectado en tiempo real a Firebase
+    </div>
+
+    <!-- Wheel / Draft Section -->
+    <div class="section-box">
+      <h2>🎲 Ruleta de Sorteo de Equipos</h2>
+      <div class="wheel-container">
+        <canvas id="rouletteCanvas" width="380" height="380"></canvas>
+        <button id="spinBtn" onclick="spinWheel()" style="font-size:1.1rem;">¡Girar Ruleta!</button>
+        <h3 id="wheelResult" style="height: 24px; color: var(--winner-color);"></h3>
+      </div>
+    </div>
+
+    <!-- Bracket Section -->
+    <div class="section-box">
+      <h2>🏆 Cuadro del Torneo (16 Equipos)</h2>
+      <p style="text-align:center; font-size:0.85em; color:#9ca3af; margin-bottom:20px;">
+        Haz clic en un equipo para declararlo ganador del combate y moverlo a la siguiente ronda.
+      </p>
+
+      <div class="bracket-wrapper">
+        <div class="bracket-grid">
+          <div>
+            <div class="column-title">Octavos de Final</div>
+            <div id="round1"></div>
+          </div>
+          <div>
+            <div class="column-title">Cuartos de Final</div>
+            <div id="round2"></div>
+          </div>
+          <div>
+            <div class="column-title">Semifinales</div>
+            <div id="round3"></div>
+          </div>
+          <div>
+            <div class="column-title">Gran Final</div>
+            <div id="round4"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:20px;">
+        <button onclick="resetTournamentData()" style="background:#ef4444; color:white;">Reiniciar Torneo</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Direct Firebase Config Integration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCWXFsw5p9VAqmS-u_gSIYyMq50M4KK7E",
+      authDomain: "torneo-gimnasios-duales.firebaseapp.com",
+      databaseURL: "https://torneo-gimnasios-duales-default-rtdb.firebaseio.com",
+      projectId: "torneo-gimnasios-duales",
+      storageBucket: "torneo-gimnasios-duales.firebasestorage.app",
+      messagingSenderId: "441384922909",
+      appId: "1:441384922909:web:068a84bd67a2460a03fbf4",
+      measurementId: "G-L0SFES97JD"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const tournamentRef = db.ref('torneo_state');
+
+    let state = {
+      matches: {
+        round1: Array(8).fill(null).map((_, i) => ({ team1: `Equipo ${i*2+1}`, team2: (i*2+2 === 16 ? "BYE (Pase Libre)" : `Equipo ${i*2+2}`), winner: (i*2+2 === 16 ? `Equipo ${i*2+1}` : null) })),
+        round2: Array(4).fill(null).map(() => ({ team1: "", team2: "", winner: null })),
+        round3: Array(2).fill(null).map(() => ({ team1: "", team2: "", winner: null })),
+        round4: Array(1).fill(null).map(() => ({ team1: "", team2: "", winner: null }))
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Sync with Firebase Realtime Database
+      tournamentRef.on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          state = val;
+          renderBracket();
+        } else {
+          tournamentRef.set(state);
+        }
+      });
+      drawWheel();
+    });
+
+    function syncState() {
+      tournamentRef.set(state);
+    }
+
+    function selectWinner(roundKey, matchIdx, teamNum) {
+      const round = state.matches[roundKey];
+      const match = round[matchIdx];
+      const selectedTeam = teamNum === 1 ? match.team1 : match.team2;
+      
+      if (!selectedTeam || selectedTeam.includes("BYE")) return;
+
+      match.winner = selectedTeam;
+
+      const nextRounds = { round1: 'round2', round2: 'round3', round3: 'round4' };
+      const nextRoundKey = nextRounds[roundKey];
+
+      if (nextRoundKey) {
+        const nextMatchIdx = Math.floor(matchIdx / 2);
+        const isTeam1 = matchIdx % 2 === 0;
+        if (isTeam1) {
+          state.matches[nextRoundKey][nextMatchIdx].team1 = selectedTeam;
+        } else {
+          state.matches[nextRoundKey][nextMatchIdx].team2 = selectedTeam;
+        }
+      }
+
+      syncState();
+    }
+
+    function renderBracket() {
+      ['round1', 'round2', 'round3', 'round4'].forEach(roundKey => {
+        const container = document.getElementById(roundKey);
+        if (!container) return;
+        container.innerHTML = '';
+
+        state.matches[roundKey].forEach((m, idx) => {
+          const div = document.createElement('div');
+          div.className = 'matchup';
+          div.innerHTML = `
+            <div class="team-slot ${m.winner === m.team1 && m.team1 ? 'winner' : ''}" onclick="selectWinner('${roundKey}', ${idx}, 1)">
+              <span class="team-name">${m.team1 || '---'}</span>
+            </div>
+            <div class="team-slot ${m.winner === m.team2 && m.team2 ? 'winner' : ''}" onclick="selectWinner('${roundKey}', ${idx}, 2)">
+              <span class="team-name">${m.team2 || '---'}</span>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function resetTournamentData() {
+      if (confirm("¿Estás seguro de reiniciar todo el torneo?")) {
+        state.matches = {
+          round1: Array(8).fill(null).map((_, i) => ({ team1: `Equipo ${i*2+1}`, team2: (i*2+2 === 16 ? "BYE (Pase Libre)" : `Equipo ${i*2+2}`), winner: (i*2+2 === 16 ? `Equipo ${i*2+1}` : null) })),
+          round2: Array(4).fill(null).map(() => ({ team1: "", team2: "", winner: null })),
+          round3: Array(2).fill(null).map(() => ({ team1: "", team2: "", winner: null })),
+          round4: Array(1).fill(null).map(() => ({ team1: "", team2: "", winner: null }))
+        };
+        syncState();
+      }
+    }
+
+    // Wheel animation
+    const canvas = document.getElementById('rouletteCanvas');
+    const ctx = canvas.getContext('2d');
+    const options = ["Jugador 1", "Jugador 2", "Jugador 3", "Jugador 4", "Hermano"];
+    const colors = ["#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
+
+    function drawWheel() {
+      const numOptions = options.length;
+      const arcSize = (2 * Math.PI) / numOptions;
+      ctx.clearRect(0, 0, 380, 380);
+
+      options.forEach((opt, i) => {
+        const angle = i * arcSize;
+        ctx.beginPath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.moveTo(190, 190);
+        ctx.arc(190, 190, 170, angle, angle + arcSize);
+        ctx.lineTo(190, 190);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(190, 190);
+        ctx.rotate(angle + arcSize / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 15px sans-serif";
+        ctx.fillText(opt, 150, 5);
+        ctx.restore();
+      });
+    }
+
+    function spinWheel() {
+      const btn = document.getElementById('spinBtn');
+      btn.disabled = true;
+      const spins = 5 + Math.random() * 5;
+      const duration = 3000;
+      const start = performance.now();
+
+      function animate(now) {
+        const elapsed = now - start;
+        if (elapsed < duration) {
+          const progress = elapsed / duration;
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+          const angle = easeOut * spins * 2 * Math.PI;
+          ctx.save();
+          ctx.translate(190, 190);
+          ctx.rotate(angle);
+          ctx.translate(-190, -190);
+          drawWheel();
+          ctx.restore();
+          requestAnimationFrame(animate);
+        } else {
+          btn.disabled = false;
+          const chosen = options[Math.floor(Math.random() * options.length)];
+          document.getElementById('wheelResult').innerText = `🎉 ¡Turno de: ${chosen}!`;
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+  </script>
+</body>
+</html>
