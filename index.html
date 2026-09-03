@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokémon Champions - Gimnasios Duales</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #f59e0b;
+      --accent-blue: #3b82f6;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px; }
+    
+    .container { max-width: 1350px; margin: 0 auto; }
+    h1 { text-align: center; color: var(--accent); margin-bottom: 20px; font-size: 2.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+    h2 { color: var(--accent-blue); font-size: 1.25rem; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+    /* Controles */
+    .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+    input[type="text"] { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: #0f172a; color: #fff; }
+    button { background: var(--accent-blue); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    button:hover { opacity: 0.9; transform: translateY(-1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    button.btn-accent { background: var(--accent); color: #0f172a; }
+    button.btn-danger { background: #ef4444; color: #fff; }
+    button.btn-danger:hover { background: #dc2626; }
+    
+    .player-list { list-style: none; }
+    .player-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border); }
+    .btn-del { background: #ef4444; padding: 4px 8px; font-size: 0.8rem; }
+
+    /* Ruleta */
+    .options { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-dim); }
+    .roulette-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; background: #0b0f19; border-radius: 8px; border: 1px dashed var(--border); padding: 20px; }
+    .slots { display: flex; gap: 15px; margin-bottom: 20px; }
+    .type-badge { width: 110px; height: 45px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); transition: background-color 0.05s ease, transform 0.05s ease; }
+    .type-badge.spinning { transform: scale(1.08); }
+
+    /* Tipos Pokémon */
+    .type-Normal { background: #A8A878; } .type-Fire { background: #F08030; } .type-Water { background: #6890F0; }
+    .type-Grass { background: #78C850; } .type-Electric { background: #F8D030; color: #000 !important; } .type-Ice { background: #98D8D8; color: #000 !important; }
+    .type-Fighting { background: #C03028; } .type-Poison { background: #A040A0; } .type-Ground { background: #E0C068; color: #000 !important; }
+    .type-Flying { background: #A890F0; } .type-Psychic { background: #F85888; } .type-Bug { background: #A8B820; }
+    .type-Rock { background: #B8A038; } .type-Ghost { background: #705598; } .type-Dragon { background: #7038F8; }
+    .type-Steel { background: #B8B8D0; color: #000 !important; } .type-Dark { background: #705848; } .type-Fairy { background: #EE99AC; color: #000 !important; }
+    .type-None { background: #334155; color: #64748b; }
+
+    /* Resumen Equipos */
+    .teams-container { margin-top: 20px; }
+    .player-teams { margin-bottom: 15px; }
+    .player-name { font-weight: bold; color: var(--accent); margin-bottom: 5px; }
+    .team-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pair-badge { background: #0f172a; border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px; display: flex; align-items: center; gap: 5px; }
+    .btn-del-pair { background: #ef4444; border: none; color: #fff; font-size: 0.65rem; border-radius: 4px; padding: 2px 5px; cursor: pointer; margin-left: 4px; }
+    .btn-del-pair:hover { background: #dc2626; }
+
+    /* Bracket Visual Interactivo */
+    .bracket-wrapper { overflow-x: auto; padding: 20px 0; }
+    .bracket-tree { display: flex; justify-content: center; align-items: stretch; gap: 15px; min-width: 1100px; }
+    .bracket-side { display: flex; gap: 15px; }
+    
+    .bracket-column { display: flex; flex-direction: column; height: 100%; }
+    .round-title { text-align: center; font-size: 0.75rem; font-weight: bold; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 10px; }
+    
+    .column-matches { display: flex; flex-direction: column; justify-content: space-around; flex: 1; }
+
+    .matchup-pair { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+
+    .bracket-node { 
+      background: #0f172a; 
+      border: 2px solid var(--border); 
+      border-radius: 12px; 
+      padding: 6px 10px; 
+      width: 155px; 
+      text-align: center; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4); 
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    .bracket-node:hover {
+      transform: scale(1.03);
+      border-color: var(--accent-blue);
+    }
+    .bracket-node.center-final {
+      border-color: var(--accent);
+      background: #1e1b4b;
+      width: 180px;
+      padding: 12px;
+    }
+    .bracket-node.is-wildcard {
+      border-color: #64748b;
+      background: #1e293b;
+    }
+    
+    .node-owner { font-weight: bold; font-size: 0.8rem; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .node-owner.wildcard-text { color: #94a3b8; font-style: italic; }
+    .node-types { display: flex; justify-content: center; gap: 4px; margin-top: 4px; }
+    .node-type-pill { width: 45px; height: 16px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 style="margin-bottom: 0;">⚡ Gimnasios Duales - Pokémon Champions ⚡</h1>
+    <button class="btn-danger" id="btnClearAll">🗑️ Limpiar / Reiniciar Todo</button>
+  </div>
+
+  <div class="grid">
+    <!-- Panel 1: Participantes -->
+    <div class="card">
+      <h2>1. Participantes</h2>
+      <div class="input-group">
+        <input type="text" id="playerInput" placeholder="Nombre / Nickname">
+        <button id="btnAddPlayer">Agregar</button>
+      </div>
+      <ul class="player-list" id="playerList"></ul>
+    </div>
+
+    <!-- Panel 2: Sorteo Ruleta -->
+    <div class="card">
+      <h2>2. Sorteo de Tipos</h2>
+      <div class="options">
+        <label><input type="checkbox" id="allowDuplicates"> Permitir combinaciones de un solo tipo (ej. Agua/Agua)</label>
+      </div>
+      <div class="input-group">
+        <select id="selectPlayer" style="flex:1; padding:10px; border-radius:6px; background:#0f172a; color:#fff; border:1px solid var(--border);"></select>
+        <button class="btn-accent" id="spinBtn">¡Girar Ruleta!</button>
+      </div>
+
+      <div class="roulette-container">
+        <div class="slots">
+          <div id="slot1" class="type-badge type-None">Tipo 1</div>
+          <div id="slot2" class="type-badge type-None">Tipo 2</div>
+        </div>
+        <button id="saveTeamBtn" class="btn-accent" style="display:none; margin-top: 10px;">💾 Guardar Equipo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Equipos -->
+  <div class="card teams-container">
+    <h2>3. Equipos Asignados</h2>
+    <div id="assignedTeams"></div>
+    <button class="btn-accent" id="btnGenerateBracket" style="width:100%; margin-top:15px; font-size:1.1rem; padding:12px;">🏆 Generar Grilla de Torneo</button>
+  </div>
+
+  <!-- Panel 4: Bracket Visual Interactivo -->
+  <div class="card" style="margin-top:20px;">
+    <h2>4. Cuadrante Interactivo (Clic Izquierdo: Avanzar | Clic Derecho: Deshacer)</h2>
+    <div class="bracket-wrapper">
+      <div id="bracketTree" class="bracket-tree"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBCWXFsw5p9VAqmS-u_gSIYyMq50M4KK7E",
+    authDomain: "torneo-gimnasios-duales.firebaseapp.com",
+    databaseURL: "https://torneo-gimnasios-duales-default-rtdb.firebaseio.com",
+    projectId: "torneo-gimnasios-duales",
+    storageBucket: "torneo-gimnasios-duales.firebasestorage.app",
+    messagingSenderId: "441384922909",
+    appId: "1:441384922909:web:068a84bd67a2460a03fbf4",
+    measurementId: "G-L0SFES97JD"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Steel', 'Dark', 'Fairy'];
+
+  let players = ["Richard", "Félix", "Alejandro", "Jorge"];
+  let teamsData = {}; 
+  let currentPair = [];
+  let isSpinning = false;
+  let lastSpinId = null;
+
+  let bracketState = {
+    octavosL: [], octavosR: [],
+    cuartosL: [null, null, null, null],
+    cuartosR: [null, null, null, null],
+    semisL: [null, null],
+    semisR: [null, null],
+    finalL: null,
+    finalR: null,
+    champion: null
+  };
+
+  const tournamentRef = ref(db, 'tournament');
+  onValue(tournamentRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      if (data.players) players = data.players;
+      if (data.teamsData) teamsData = data.teamsData;
+      if (data.bracketState) bracketState = sanitizeBracketState(data.bracketState);
+      
+      if (data.spinEvent && data.spinEvent.id !== lastSpinId) {
+        lastSpinId = data.spinEvent.id;
+        runRouletteAnimation(data.spinEvent.finalPair);
+      }
+    } else {
+      saveDataToFirebase();
+    }
+    renderPlayers();
+    renderBracketUI();
+  });
+
+  function sanitizeBracketState(bState) {
+    return {
+      octavosL: bState.octavosL || [],
+      octavosR: bState.octavosR || [],
+      cuartosL: bState.cuartosL || [null, null, null, null],
+      cuartosR: bState.cuartosR || [null, null, null, null],
+      semisL: bState.semisL || [null, null],
+      semisR: bState.semisR || [null, null],
+      finalL: bState.finalL || null,
+      finalR: bState.finalR || null,
+      champion: bState.champion || null
+    };
+  }
+
+  function saveDataToFirebase() {
+    set(ref(db, 'tournament'), {
+      players: players,
+      teamsData: teamsData,
+      bracketState: bracketState,
+      spinEvent: lastSpinId ? { id: lastSpinId, finalPair: currentPair } : null
+    });
+  }
+
+  function clearAllData() {
+    if (confirm("¿Estás seguro de que deseas borrar todos los datos del torneo y empezar desde cero?")) {
+      players = ["Richard", "Félix", "Alejandro", "Jorge"];
+      teamsData = { "Richard": [], "Félix": [], "Alejandro": [], "Jorge": [] };
+      lastSpinId = null;
+      bracketState = {
+        octavosL: [], octavosR: [],
+        cuartosL: [null, null, null, null],
+        cuartosR: [null, null, null, null],
+        semisL: [null, null],
+        semisR: [null, null],
+        finalL: null,
+        finalR: null,
+        champion: null
+      };
+      saveDataToFirebase();
+    }
+  }
+
+  function renderPlayers() {
+    const list = document.getElementById('playerList');
+    const select = document.getElementById('selectPlayer');
+    const currentSelected = select.value;
+
+    list.innerHTML = '';
+    select.innerHTML = '';
+
+    players.forEach((p, idx) => {
+      if(!teamsData[p]) teamsData[p] = [];
+      list.innerHTML += `<li class="player-item">${p} <button class="btn-del" data-idx="${idx}">X</button></li>`;
+      select.innerHTML += `<option value="${p}">${p} (${teamsData[p].length} equipos)</option>`;
+    });
+
+    document.querySelectorAll('.btn-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        removePlayer(parseInt(e.target.dataset.idx));
+      });
+    });
+
+    if (currentSelected && players.includes(currentSelected)) {
+      select.value = currentSelected;
+    }
+    renderTeams();
+  }
+
+  function addPlayer() {
+    const input = document.getElementById('playerInput');
+    const name = input.value.trim();
+    if(name && !players.includes(name)) {
+      players.push(name);
+      teamsData[name] = [];
+      input.value = '';
+      saveDataToFirebase();
+    }
+  }
+
+  function removePlayer(idx) {
+    delete teamsData[players[idx]];
+    players.splice(idx, 1);
+    saveDataToFirebase();
+  }
+
+  function removeTeamPair(player, pairIndex) {
+    if (teamsData[player] && teamsData[player][pairIndex]) {
+      teamsData[player].splice(pairIndex, 1);
+      saveDataToFirebase();
+    }
+  }
+
+  function triggerSpin() {
+    if (isSpinning) return;
+
+    const allowDupes = document.getElementById('allowDuplicates').checked;
+    const t1 = TYPES[Math.floor(Math.random() * TYPES.length)];
+    let t2 = TYPES[Math.floor(Math.random() * TYPES.length)];
+    
+    if (!allowDupes) {
+      while (t1 === t2) {
+        t2 = TYPES[Math.floor(Math.random() * TYPES.length)];
+      }
+    }
+
+    const finalPair = [t1, t2];
+    const newSpinId = Date.now().toString();
+
+    set(ref(db, 'tournament/spinEvent'), {
+      id: newSpinId,
+      finalPair: finalPair
+    });
+  }
+
+  function runRouletteAnimation(finalPair) {
+    if (isSpinning) return;
+
+    const btn = document.getElementById('spinBtn');
+    const saveBtn = document.getElementById('saveTeamBtn');
+    const slot1 = document.getElementById('slot1');
+    const slot2 = document.getElementById('slot2');
+
+    isSpinning = true;
+    btn.disabled = true;
+    saveBtn.style.display = 'none';
+
+    slot1.classList.add('spinning');
+    slot2.classList.add('spinning');
+
+    let counter = 0;
+    const totalChanges = 25;
+    const initialSpeed = 60;
+
+    function runCycle() {
+      if (counter < totalChanges - 1) {
+        const randT1 = TYPES[Math.floor(Math.random() * TYPES.length)];
+        const randT2 = TYPES[Math.floor(Math.random() * TYPES.length)];
+        updateSlot('slot1', randT1);
+        updateSlot('slot2', randT2);
+      } else {
+        updateSlot('slot1', finalPair[0]);
+        updateSlot('slot2', finalPair[1]);
+      }
+
+      counter++;
+
+      if (counter < totalChanges) {
+        const delay = initialSpeed + Math.pow(counter, 1.4);
+        setTimeout(runCycle, delay);
+      } else {
+        currentPair = finalPair;
+        slot1.classList.remove('spinning');
+        slot2.classList.remove('spinning');
+        btn.disabled = false;
+        saveBtn.style.display = 'inline-block';
+        isSpinning = false;
+      }
+    }
+
+    runCycle();
+  }
+
+  function updateSlot(id, type) {
+    const el = document.getElementById(id);
+    el.className = `type-badge type-${type} ${isSpinning ? 'spinning' : ''}`;
+    el.innerText = type;
+  }
+
+  function saveCurrentTeam() {
+    const select = document.getElementById('selectPlayer');
+    const p = select.value;
+    
+    if(p && currentPair.length === 2) {
+      if(!teamsData[p]) teamsData[p] = [];
+      teamsData[p].push([...currentPair]);
+      document.getElementById('saveTeamBtn').style.display = 'none';
+      saveDataToFirebase();
+    }
+  }
+
+  function renderTeams() {
+    const container = document.getElementById('assignedTeams');
+    container.innerHTML = '';
+
+    for(let p in teamsData) {
+      if(!teamsData[p] || teamsData[p].length === 0) continue;
+      
+      let html = `<div class="player-teams"><div class="player-name">${p}</div><div class="team-badges">`;
+      teamsData[p].forEach((pair, pairIdx) => {
+        html += `<div class="pair-badge">
+          <span class="node-type-pill type-${pair[0]}" style="width:55px; height:20px;">${pair[0]}</span>
+          <span class="node-type-pill type-${pair[1]}" style="width:55px; height:20px;">${pair[1]}</span>
+          <button class="btn-del-pair" data-player="${p}" data-pairidx="${pairIdx}">✕</button>
+        </div>`;
+      });
+      html += `</div></div>`;
+      container.innerHTML += html;
+    }
+
+    document.querySelectorAll('.btn-del-pair').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const player = e.target.dataset.player;
+        const pairIdx = parseInt(e.target.dataset.pairidx);
+        removeTeamPair(player, pairIdx);
+      });
+    });
+  }
+
+  function generateBracket() {
+    let allTeams = [];
+    for(let p in teamsData) {
+      if(teamsData[p]) {
+        teamsData[p].forEach(pair => {
+          allTeams.push({ owner: p, types: pair, isWildcard: false });
+        });
+      }
+    }
+
+    if(allTeams.length < 2) {
+      alert("Agrega al menos 2 equipos para armar el torneo.");
+      return;
+    }
+
+    // Agregar comodines únicamente para rellenar la grilla de 16
+    let wildcardCount = 1;
+    while(allTeams.length < 16) {
+      allTeams.push({ owner: `Comodín ${wildcardCount++}`, types: ['None', 'None'], isWildcard: true });
+    }
+
+    let finalOctavos = new Array(16).fill(null);
+    let success = false;
+    let attempts = 0;
+
+    while(!success && attempts < 100) {
+      attempts++;
+      let tempPool = [...allTeams].sort(() => Math.random() - 0.5);
+      let valid = true;
+
+      for(let i=0; i<8; i++) {
+        let t1 = tempPool[i*2];
+        let t2 = tempPool[i*2 + 1];
+        if(!t1.isWildcard && !t2.isWildcard && t1.owner === t2.owner) {
+          valid = false;
+          break;
+        }
+      }
+      if(valid) {
+        finalOctavos = tempPool;
+        success = true;
+      }
+    }
+
+    bracketState = {
+      octavosL: finalOctavos.slice(0, 8),
+      octavosR: finalOctavos.slice(8, 16),
+      cuartosL: [null, null, null, null],
+      cuartosR: [null, null, null, null],
+      semisL: [null, null],
+      semisR: [null, null],
+      finalL: null,
+      finalR: null,
+      champion: null
+    };
+
+    saveDataToFirebase();
+  }
+
+  function advanceTeam(stage, index) {
+    let team = null;
+
+    if(stage === 'octavosL') team = bracketState.octavosL[index];
+    else if(stage === 'octavosR') team = bracketState.octavosR[index];
+    else if(stage === 'cuartosL') team = bracketState.cuartosL[index];
+    else if(stage === 'cuartosR') team = bracketState.cuartosR[index];
+    else if(stage === 'semisL') team = bracketState.semisL[index];
+    else if(stage === 'semisR') team = bracketState.semisR[index];
+    else if(stage === 'finalL') team = bracketState.finalL;
+    else if(stage === 'finalR') team = bracketState.finalR;
+
+    if(!team) return;
+
+    if(stage === 'octavosL') bracketState.cuartosL[Math.floor(index / 2)] = team;
+    else if(stage === 'octavosR') bracketState.cuartosR[Math.floor(index / 2)] = team;
+    else if(stage === 'cuartosL') bracketState.semisL[Math.floor(index / 2)] = team;
+    else if(stage === 'cuartosR') bracketState.semisR[Math.floor(index / 2)] = team;
+    else if(stage === 'semisL') bracketState.finalL = team;
+    else if(stage === 'semisR') bracketState.finalR = team;
+    else if(stage === 'finalL' || stage === 'finalR') bracketState.champion = team;
+
+    saveDataToFirebase();
+  }
+
+  function undoAdvance(stage, index) {
+    if (stage === 'cuartosL') {
+      bracketState.cuartosL[index] = null;
+      undoAdvance('semisL', Math.floor(index / 2));
+    } else if (stage === 'cuartosR') {
+      bracketState.cuartosR[index] = null;
+      undoAdvance('semisR', Math.floor(index / 2));
+    } else if (stage === 'semisL') {
+      bracketState.semisL[index] = null;
+      if (bracketState.finalL) bracketState.finalL = null;
+      bracketState.champion = null;
+    } else if (stage === 'semisR') {
+      bracketState.semisR[index] = null;
+      if (bracketState.finalR) bracketState.finalR = null;
+      bracketState.champion = null;
+    } else if (stage === 'finalL') {
+      bracketState.finalL = null;
+      bracketState.champion = null;
+    } else if (stage === 'finalR') {
+      bracketState.finalR = null;
+      bracketState.champion = null;
+    } else if (stage === 'champion') {
+      bracketState.champion = null;
+    }
+
+    saveDataToFirebase();
+  }
+
+  function renderBracketUI() {
+    const tree = document.getElementById('bracketTree');
+    tree.innerHTML = `
+      <!-- LADO IZQUIERDO -->
+      <div class="bracket-side">
+        <div class="bracket-column">
+          <div class="round-title">Octavos (I)</div>
+          <div class="column-matches">
+            ${renderMatchupPairs(bracketState.octavosL, 'octavosL')}
+          </div>
+        </div>
+        <div class="bracket-column">
+          <div class="round-title">Cuartos (I)</div>
+          <div class="column-matches">
+            ${renderMatchupPairs(bracketState.cuartosL, 'cuartosL')}
+          </div>
+        </div>
+        <div class="bracket-column">
+          <div class="round-title">Semis (I)</div>
+          <div class="column-matches">
+            ${renderMatchupPairs(bracketState.semisL, 'semisL')}
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTRO: FINAL Y CAMPEÓN -->
+      <div class="bracket-column">
+        <div class="round-title" style="color:var(--accent);">👑 GRAN FINAL</div>
+        <div class="column-matches" style="justify-content:center; gap:20px;">
+          <div class="matchup-pair">
+            ${renderSingleNode(bracketState.finalL, 'finalL', 0)}
+            <div style="text-align:center; font-size:0.7rem; color:var(--text-dim); margin:2px 0;">VS</div>
+            ${renderSingleNode(bracketState.finalR, 'finalR', 0)}
+          </div>
+          
+          <div class="bracket-node center-final ${bracketState.champion?.isWildcard ? 'is-wildcard' : ''}" data-stage="champion" data-index="0">
+            <div class="node-owner ${bracketState.champion?.isWildcard ? 'wildcard-text' : ''}" style="color:var(--accent); font-size:1rem;">
+              ${bracketState.champion ? '🏆 ' + bracketState.champion.owner : 'CAMPEÓN'}
+            </div>
+            <div class="node-types">
+              ${bracketState.champion ? `
+                <span class="node-type-pill type-${bracketState.champion.types[0]}">${bracketState.champion.types[0]}</span>
+                <span class="node-type-pill type-${bracketState.champion.types[1]}">${bracketState.champion.types[1]}</span>
+              ` : '<span class="node-type-pill type-None">-</span>'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LADO DERECHO -->
+      <div class="bracket-side">
+        <div class="bracket-column">
+          <div class="round-title">Semis (D)</div>
+          <div class="column-matches">
+            ${renderMatchupPairs(bracketState.semisR, 'semisR')}
+          </div>
+        </div>
+        <div class="bracket-column">
+          <div class="round-title">Cuartos (D)</div>
+          <div class="column-matches">
+            ${renderMatchupPairs(bracketState.cuartosR, 'cuartosR')}
+          </div>
+        </div>
+        <div class="bracket-column">
+          <div class="round-title">Octavos (D)</div>
+          <div class="column-matches">
+            ${renderMatchupPairs(bracketState.octavosR, 'octavosR')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.querySelectorAll('.bracket-node[data-stage]').forEach(node => {
+      node.addEventListener('click', () => {
+        const stage = node.dataset.stage;
+        const index = parseInt(node.dataset.index);
+        if (stage !== 'champion') {
+          advanceTeam(stage, index);
+        }
+      });
+
+      node.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const stage = node.dataset.stage;
+        const index = parseInt(node.dataset.index);
+        undoAdvance(stage, index);
+      });
+    });
+  }
+
+  function renderMatchupPairs(list, stage) {
+    let html = '';
+    const safeList = list || [];
+    for(let i=0; i<safeList.length; i+=2) {
+      html += `<div class="matchup-pair">
+        ${renderSingleNode(safeList[i], stage, i)}
+        ${renderSingleNode(safeList[i+1], stage, i+1)}
+      </div>`;
+    }
+    return html;
+  }
+
+  function renderSingleNode(team, stage, index) {
+    if(!team) {
+      return `
+        <div class="bracket-node" data-stage="${stage}" data-index="${index}" style="opacity: 0.4;">
+          <div class="node-owner" style="color:var(--text-dim);">Por definir</div>
+          <div class="node-types">
+            <span class="node-type-pill type-None">-</span>
+            <span class="node-type-pill type-None">-</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const isWildcard = team.isWildcard || team.owner.startsWith('Comodín');
+
+    return `
+      <div class="bracket-node ${isWildcard ? 'is-wildcard' : ''}" data-stage="${stage}" data-index="${index}">
+        <div class="node-owner ${isWildcard ? 'wildcard-text' : ''}">${team.owner}</div>
+        <div class="node-types">
+          <span class="node-type-pill type-${team.types[0]}">${team.types[0]}</span>
+          <span class="node-type-pill type-${team.types[1]}">${team.types[1]}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Event Listeners principales
+  document.getElementById('btnClearAll').addEventListener('click', clearAllData);
+  document.getElementById('btnAddPlayer').addEventListener('click', addPlayer);
+  document.getElementById('playerInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addPlayer();
+  });
+  document.getElementById('spinBtn').addEventListener('click', triggerSpin);
+  document.getElementById('saveTeamBtn').addEventListener('click', saveCurrentTeam);
+  document.getElementById('btnGenerateBracket').addEventListener('click', generateBracket);
+</script>
+</body>
+</html>
