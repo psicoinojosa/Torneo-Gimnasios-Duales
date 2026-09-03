@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gimnasios Duales - Pokémon Champions</title>
+  <!-- Firebase App & Database SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    :root {
+      --bg-color: #0d131d;
+      --card-bg: #161f2e;
+      --card-border: #233147;
+      --accent-gold: #f59e0b;
+      --accent-gold-hover: #d97706;
+      --primary-blue: #3b82f6;
+      --primary-blue-hover: #2563eb;
+      --danger-red: #ef4444;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+
+    body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; min-height: 100vh; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--card-border); flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.8rem; color: #fff; display: flex; align-items: center; gap: 10px; }
+    
+    .btn { padding: 10px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: background-color 0.2s, transform 0.1s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background-color: var(--primary-blue); color: white; }
+    .btn-primary:hover { background-color: var(--primary-blue-hover); }
+    .btn-gold { background-color: var(--accent-gold); color: #000; }
+    .btn-gold:hover { background-color: var(--accent-gold-hover); }
+    .btn-danger { background-color: var(--danger-red); color: white; }
+    .btn-danger:hover { background-color: #dc2626; }
+
+    .grid-setup { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px; }
+    .card { background-color: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 20px; }
+    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 16px; color: var(--primary-blue); }
+
+    .input-group { display: flex; gap: 10px; margin-bottom: 12px; }
+    input[type="text"] { flex: 1; padding: 10px 14px; background-color: #0d131d; border: 1px solid var(--card-border); border-radius: 6px; color: white; outline: none; }
+    input[type="text"]:focus { border-color: var(--primary-blue); }
+    select { width: 100%; padding: 10px; background-color: #0d131d; border: 1px solid var(--card-border); border-radius: 6px; color: white; margin-bottom: 12px; }
+
+    .participant-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+    .participant-item { display: flex; justify-content: space-between; align-items: center; background: #0d131d; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--card-border); }
+
+    .roulette-display { display: flex; justify-content: center; gap: 16px; margin: 20px 0; }
+    .type-badge { padding: 12px 24px; border-radius: 6px; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; background-color: #233147; color: white; text-align: center; min-width: 110px; border: 1px solid rgba(255,255,255,0.1); }
+
+    /* Estilos para los Tipos de Pokémon */
+    .type-NORMAL { background-color: #A8A878; color: #000; }
+    .type-FIRE { background-color: #F08030; color: #fff; }
+    .type-WATER { background-color: #6890F0; color: #fff; }
+    .type-GRASS { background-color: #78C850; color: #000; }
+    .type-ELECTRIC { background-color: #F8D030; color: #000; }
+    .type-ICE { background-color: #98D8D8; color: #000; }
+    .type-FIGHTING { background-color: #C03028; color: #fff; }
+    .type-POISON { background-color: #A040A0; color: #fff; }
+    .type-GROUND { background-color: #E0C068; color: #000; }
+    .type-FLYING { background-color: #A890F0; color: #fff; }
+    .type-PSYCHIC { background-color: #F85888; color: #fff; }
+    .type-BUG { background-color: #A8B820; color: #000; }
+    .type-ROCK { background-color: #B8A038; color: #fff; }
+    .type-GHOST { background-color: #705898; color: #fff; }
+    .type-DRAGON { background-color: #7038F8; color: #fff; }
+    .type-DARK { background-color: #705848; color: #fff; }
+    .type-STEEL { background-color: #B8B8D0; color: #000; }
+    .type-FAIRY { background-color: #EE99AC; color: #000; }
+    .type-NONE { background-color: #4b5563; color: #9ca3af; }
+
+    .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+    .team-card { background: #0d131d; padding: 12px; border-radius: 6px; border: 1px solid var(--card-border); }
+    .team-player { font-weight: 700; margin-bottom: 6px; font-size: 0.95rem; }
+    .team-types { display: flex; gap: 6px; }
+    .team-types .type-badge { padding: 4px 8px; font-size: 0.75rem; min-width: auto; }
+
+    /* GRILLA DE TORNEO */
+    .bracket-container { overflow-x: auto; padding: 20px 0; }
+    .bracket-grid { display: flex; justify-content: space-between; min-width: 1100px; gap: 20px; }
+    .bracket-column { flex: 1; display: flex; flex-direction: column; justify-content: space-around; }
+    .column-header { text-align: center; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; }
+
+    .matchup { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px; padding: 6px; margin: 8px 0; position: relative; }
+    .matchup-team { padding: 8px; border-radius: 4px; background: #0d131d; cursor: pointer; transition: background 0.2s; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+    .matchup-team:last-child { margin-bottom: 0; }
+    .matchup-team:hover { background: #1f2d42; }
+    .matchup-team.winner { border: 1px solid var(--accent-gold); background: #262112; }
+    .matchup-team.disabled { cursor: not-allowed; opacity: 0.6; }
+
+    .p-name { font-weight: 600; font-size: 0.85rem; }
+    .p-types { display: flex; gap: 4px; }
+    .p-types .type-badge { padding: 2px 6px; font-size: 0.65rem; min-width: auto; }
+
+    .final-card { text-align: center; background: #1a1508; border: 2px solid var(--accent-gold); padding: 16px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚡ Gimnasios Duales - Pokémon Champions ⚡</h1>
+    <button class="btn btn-danger" onclick="resetAll()">🗑️ Limpiar / Reiniciar Todo</button>
+  </header>
+
+  <!-- SECCIÓN 1, 2 Y 3 (SETUP) -->
+  <div id="setup-view">
+    <div class="grid-setup">
+      <!-- 1. Participantes -->
+      <div class="card">
+        <div class="card-title">1. Participantes</div>
+        <div class="input-group">
+          <input type="text" id="participant-input" placeholder="Nombre / Nickname" />
+          <button class="btn btn-primary" onclick="addParticipant()">Agregar</button>
+        </div>
+        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 12px;">
+          <input type="checkbox" id="auto-bye" checked disabled /> Sustituir espacios vacíos (BYEs) por "Comodines numerados"
+        </label>
+        <div class="participant-list" id="participants-container"></div>
+      </div>
+
+      <!-- 2. Sorteo de Tipos -->
+      <div class="card">
+        <div class="card-title">2. Sorteo de Tipos</div>
+        <select id="player-select">
+          <option value="">-- Seleccionar Jugador --</option>
+        </select>
+        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 12px;">
+          <input type="checkbox" id="allow-same-type" onchange="toggleSameType(this.checked)" /> Permitir combinaciones de un solo tipo (ej. Agua/Agua)
+        </label>
+        <div class="roulette-display">
+          <div class="type-badge" id="type1-display">TIPO 1</div>
+          <div class="type-badge" id="type2-display">TIPO 2</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-gold" style="flex:1;" onclick="spinRoulette()">¡Girar Ruleta!</button>
+          <button class="btn btn-primary" id="btn-save-team" onclick="saveCurrentTeam()" disabled>Guardar Equipo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Equipos Asignados -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">3. Equipos Asignados</div>
+      <div class="teams-grid" id="teams-container"></div>
+      <button class="btn btn-gold" style="width: 100%; margin-top: 16px; padding: 14px; font-size: 1.1rem;" onclick="generateBracket()">🏆 Generar Grilla de Torneo</button>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 4. GRILLA DE TORNEO -->
+  <div class="card">
+    <div class="card-title">4. Cuadrante Interactivo (Haz clic en un equipo para hacerlo avanzar | Clic derecho para deshacer)</div>
+    <div class="bracket-container">
+      <div class="bracket-grid" id="bracket-tree"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- LISTA DE TIPOS Y ESTADO DE LA APLICACIÓN ---
+    const POKEMON_TYPES = ["NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY"];
+
+    const DEFAULT_STATE = {
+      status: "setup",
+      allowSameType: false,
+      participants: [],
+      teams: [],
+      bracket: null
+    };
+
+    let state = loadState();
+    let currentSpin = null;
+
+    // --- CONFIGURACIÓN DE FIREBASE SAFE ---
+    const firebaseConfig = {
+      databaseURL: "https://torneo-gimnasios-duales-default-rtdb.firebaseio.com"
+    };
+
+    let dbRef = null;
+    try {
+      if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        dbRef = firebase.database().ref('tournament');
+        dbRef.on('value', (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            state = val;
+            saveLocal(state);
+            renderUI();
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Firebase no activo o en modo local puro:", e);
+    }
+
+    // --- MANEJO DE ESTADO PERSISTENTE ---
+    function loadState() {
+      try {
+        const local = localStorage.getItem('pokemon_tournament_data');
+        return local ? JSON.parse(local) : JSON.parse(JSON.stringify(DEFAULT_STATE));
+      } catch (e) {
+        return JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
+    }
+
+    function saveState() {
+      saveLocal(state);
+      if (dbRef) {
+        try { dbRef.set(state); } catch (e) { console.warn("Error Firebase:", e); }
+      }
+      renderUI();
+    }
+
+    function saveLocal(data) {
+      try { localStorage.setItem('pokemon_tournament_data', JSON.stringify(data)); } catch (e) {}
+    }
+
+    function resetAll() {
+      if (confirm("¿Seguro que deseas reiniciar todo el torneo? Se borrarán los datos actuales.")) {
+        state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        saveState();
+        location.reload();
+      }
+    }
+
+    // --- MEJORA CALIDAD DE VIDA 1: ENTER EN INPUT ---
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('participant-input');
+      if (input) {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addParticipant();
+          }
+        });
+      }
+      renderUI();
+    });
+
+    // --- LÓGICA DE CONFIGURACIÓN Y EQUIPOS ---
+    function addParticipant() {
+      const input = document.getElementById('participant-input');
+      const name = input.value.trim();
+      if (name && !state.participants.includes(name)) {
+        state.participants.push(name);
+        input.value = '';
+        saveState();
+      }
+    }
+
+    function removeParticipant(name) {
+      state.participants = state.participants.filter(p => p !== name);
+      saveState();
+    }
+
+    function toggleSameType(val) {
+      state.allowSameType = val;
+      saveState();
+    }
+
+    function spinRoulette() {
+      const pSelect = document.getElementById('player-select');
+      if (!pSelect.value) {
+        alert("Selecciona un jugador primero.");
+        return;
+      }
+
+      let t1 = POKEMON_TYPES[Math.floor(Math.random() * POKEMON_TYPES.length)];
+      let t2 = POKEMON_TYPES[Math.floor(Math.random() * POKEMON_TYPES.length)];
+
+      if (!state.allowSameType) {
+        while (t1 === t2) {
+          t2 = POKEMON_TYPES[Math.floor(Math.random() * POKEMON_TYPES.length)];
+        }
+      }
+
+      currentSpin = { player: pSelect.value, types: [t1, t2] };
+      
+      const el1 = document.getElementById('type1-display');
+      const el2 = document.getElementById('type2-display');
+      
+      el1.textContent = t1;
+      el1.className = `type-badge type-${t1}`;
+      el2.textContent = t2;
+      el2.className = `type-badge type-${t2}`;
+
+      document.getElementById('btn-save-team').disabled = false;
+    }
+
+    function saveCurrentTeam() {
+      if (!currentSpin) return;
+      state.teams.push({
+        id: 't' + state.teams.length,
+        player: currentSpin.player,
+        types: currentSpin.types
+      });
+      currentSpin = null;
+      document.getElementById('btn-save-team').disabled = true;
+      document.getElementById('type1-display').textContent = 'TIPO 1';
+      document.getElementById('type1-display').className = 'type-badge';
+      document.getElementById('type2-display').textContent = 'TIPO 2';
+      document.getElementById('type2-display').className = 'type-badge';
+      saveState();
+    }
+
+    // --- GENERACIÓN DE GRILLA ---
+    function generateBracket() {
+      let finalTeams = [...state.teams];
+      const maxSlots = 16;
+      let byeCounter = 1;
+
+      while (finalTeams.length < maxSlots) {
+        finalTeams.push({
+          id: 'bye_' + byeCounter,
+          player: 'BYE',
+          types: ['NONE', 'NONE']
+        });
+        byeCounter++;
+      }
+
+      // Desordenar aleatoriamente
+      finalTeams.sort(() => Math.random() - 0.5);
+
+      let r1 = [];
+      for (let i = 0; i < maxSlots; i += 2) {
+        r1.push({
+          p1: finalTeams[i],
+          p2: finalTeams[i + 1],
+          winner: null
+        });
+      }
+
+      state.bracket = {
+        r1: r1,
+        r2: [null, null, null, null],
+        r3: [null, null],
+        r4: [null]
+      };
+      state.status = "generated";
+      saveState();
+    }
+
+    // --- MEJORA CALIDAD DE VIDA 2: AVANZAR Y REVERTIR (CLIC DERECHO) ---
+    function advanceTeam(roundKey, matchIndex, team) {
+      if (!team || team.player === 'BYE') return;
+
+      const bracket = state.bracket;
+      bracket[roundKey][matchIndex].winner = team;
+
+      const roundFlow = { 'r1': 'r2', 'r2': 'r3', 'r3': 'r4' };
+      const nextRound = roundFlow[roundKey];
+
+      if (nextRound) {
+        const nextMatchIndex = Math.floor(matchIndex / 2);
+        const isP1 = matchIndex % 2 === 0;
+
+        if (!bracket[nextRound][nextMatchIndex]) {
+          bracket[nextRound][nextMatchIndex] = { p1: null, p2: null, winner: null };
+        }
+
+        if (isP1) {
+          bracket[nextRound][nextMatchIndex].p1 = team;
+        } else {
+          bracket[nextRound][nextMatchIndex].p2 = team;
+        }
+      }
+
+      saveState();
+    }
+
+    function revertMatch(roundKey, matchIndex, e) {
+      if (e) e.preventDefault(); // Detener menú desplegable nativo
+
+      const bracket = state.bracket;
+      if (!bracket || !bracket[roundKey] || !bracket[roundKey][matchIndex]) return;
+
+      bracket[roundKey][matchIndex].winner = null;
+
+      // Limpiar propagación hacia las siguientes rondas
+      const roundFlow = { 'r1': 'r2', 'r2': 'r3', 'r3': 'r4' };
+      let currR = roundKey;
+      let currIdx = matchIndex;
+
+      while (roundFlow[currR]) {
+        const nextR = roundFlow[currR];
+        const nextIdx = Math.floor(currIdx / 2);
+        const isP1 = currIdx % 2 === 0;
+
+        if (bracket[nextR] && bracket[nextR][nextIdx]) {
+          if (isP1) bracket[nextR][nextIdx].p1 = null;
+          else bracket[nextR][nextIdx].p2 = null;
+          bracket[nextR][nextIdx].winner = null;
+        }
+
+        currR = nextR;
+        currIdx = nextIdx;
+      }
+
+      saveState();
+    }
+
+    // --- RENDERIZADO DE LA INTERFAZ ---
+    function renderUI() {
+      // 1. Lista de Participantes
+      const partContainer = document.getElementById('participants-container');
+      partContainer.innerHTML = state.participants.map(p => `
+        <div class="participant-item">
+          <span>${p}</span>
+          <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.75rem;" onclick="removeParticipant('${p}')">X</button>
+        </div>
+      `).join('');
+
+      // Desplegable de Selección de Jugadores
+      const pSelect = document.getElementById('player-select');
+      pSelect.innerHTML = '<option value="">-- Seleccionar Jugador --</option>' + 
+        state.participants.map(p => `<option value="${p}">${p}</option>`).join('');
+
+      document.getElementById('allow-same-type').checked = !!state.allowSameType;
+
+      // 3. Equipos Asignados
+      const teamsContainer = document.getElementById('teams-container');
+      teamsContainer.innerHTML = state.teams.map(t => `
+        <div class="team-card">
+          <div class="team-player">${t.player}</div>
+          <div class="team-types">
+            <span class="type-badge type-${t.types[0]}">${t.types[0]}</span>
+            <span class="type-badge type-${t.types[1]}">${t.types[1]}</span>
+          </div>
+        </div>
+      `).join('');
+
+      // 4. Grilla de Torneo
+      renderBracketTree();
+    }
+
+    function renderBracketTree() {
+      const tree = document.getElementById('bracket-tree');
+      if (!state.bracket) {
+        tree.innerHTML = '<div style="color: var(--text-muted); padding: 20px;">Genera los equipos y haz clic en "Generar Grilla de Torneo".</div>';
+        return;
+      }
+
+      const rounds = [
+        { key: 'r1', title: 'Ronda 1 (Octavos)' },
+        { key: 'r2', title: 'Cuartos de Final' },
+        { key: 'r3', title: 'Semifinales' },
+        { key: 'r4', title: 'Gran Final' }
+      ];
+
+      tree.innerHTML = rounds.map(r => {
+        const matches = state.bracket[r.key] || [];
+        return `
+          <div class="bracket-column">
+            <div class="column-header">${r.title}</div>
+            ${matches.map((m, idx) => renderMatchup(r.key, idx, m)).join('')}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderMatchup(roundKey, idx, match) {
+      if (!match) {
+        return `
+          <div class="matchup">
+            <div class="matchup-team disabled"><span class="p-name">Por definir</span></div>
+            <div class="matchup-team disabled"><span class="p-name">Por definir</span></div>
+          </div>
+        `;
+      }
+
+      const renderTeamCard = (team) => {
+        if (!team) return `<div class="matchup-team disabled"><span class="p-name">Por definir</span></div>`;
+        const isWinner = match.winner && match.winner.id === team.id;
+        const isBye = team.player === 'BYE';
+
+        return `
+          <div class="matchup-team ${isWinner ? 'winner' : ''} ${isBye ? 'disabled' : ''}" 
+               onclick="advanceTeam('${roundKey}', ${idx}, ${JSON.stringify(team).replace(/"/g, '&quot;')})"
+               oncontextmenu="revertMatch('${roundKey}', ${idx}, event)">
+            <span class="p-name">${team.player}</span>
+            <div class="p-types">
+              <span class="type-badge type-${team.types[0]}">${team.types[0]}</span>
+              <span class="type-badge type-${team.types[1]}">${team.types[1]}</span>
+            </div>
+          </div>
+        `;
+      };
+
+      if (roundKey === 'r4' && match.winner) {
+        return `
+          <div class="final-card">
+            <div style="font-size: 0.8rem; color: var(--accent-gold); font-weight: 700; margin-bottom: 6px;">🎉 CAMPEÓN 🎉</div>
+            <div style="font-size: 1.2rem; font-weight: 800;">${match.winner.player}</div>
+            <div class="p-types" style="justify-content: center; margin-top: 6px;">
+              <span class="type-badge type-${match.winner.types[0]}">${match.winner.types[0]}</span>
+              <span class="type-badge type-${match.winner.types[1]}">${match.winner.types[1]}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="matchup">
+          ${renderTeamCard(match.p1)}
+          ${renderTeamCard(match.p2)}
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
